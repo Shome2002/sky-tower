@@ -85,7 +85,8 @@ export default function App() {
   // Optional auto-detection if user placed /public/models/character.glb
   useEffect(() => {
     let cancelled = false;
-    fetch('/models/character.glb', { method: 'HEAD' })
+    const defaultGlbPath = `${import.meta.env.BASE_URL}models/character.glb`;
+    fetch(defaultGlbPath, { method: 'HEAD' })
       .then((res) => {
         const contentType = res.headers.get('content-type') || '';
         if (
@@ -93,7 +94,7 @@ export default function App() {
           res.ok &&
           !contentType.includes('text/html')
         ) {
-          setCustomModelUrl('/models/character.glb');
+          setCustomModelUrl(defaultGlbPath);
           setCustomModelName('character.glb (기본 프로젝트 모델)');
         }
       })
