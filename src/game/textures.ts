@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PlatformSurfaceTheme } from './levels';
+import { markShared } from './dispose';
 
 const sharedTextureCache = new Map<PlatformSurfaceTheme, THREE.CanvasTexture>();
 
@@ -192,6 +193,7 @@ export function getSharedPlatformTexture(
   map.repeat.set(2, 2);
   map.generateMipmaps = true;
   map.minFilter = THREE.LinearMipmapLinearFilter;
+  markShared(map);
 
   sharedTextureCache.set(theme, map);
   return map;

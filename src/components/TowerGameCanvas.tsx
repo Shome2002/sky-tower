@@ -25,6 +25,7 @@ import {
   updateGLBCharacterAnimation,
 } from '../game/characterLoader';
 import { soundFX } from '../game/audio';
+import { disposeObject3D } from '../game/dispose';
 import { TouchInputRef } from './TouchControls';
 
 export type GameStatus =
@@ -276,12 +277,25 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
     scene.add(lumi.root);
 
     let activeGLBChar: LoadedGLBCharacter | null = null;
+    let glbLoadToken = 0;
 
-    const applyCustomGLBModel = async (targetUrl: string | null) => {
+    const releaseActiveGLBModel = () => {
+      const prevMixer = activeGLBChar?.mixer ?? null;
+      if (prevMixer) {
+        prevMixer.stopAllAction();
+        prevMixer.uncacheRoot(prevMixer.getRoot());
+      }
       while (lumi.customModelSlot.children.length > 0) {
-        lumi.customModelSlot.remove(lumi.customModelSlot.children[0]);
+        const child = lumi.customModelSlot.children[0];
+        lumi.customModelSlot.remove(child);
+        disposeObject3D(child);
       }
       activeGLBChar = null;
+    };
+
+    const applyCustomGLBModel = async (targetUrl: string | null) => {
+      const token = ++glbLoadToken;
+      releaseActiveGLBModel();
 
       if (!targetUrl) {
         lumi.customModelSlot.visible = false;
@@ -293,12 +307,19 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
       callbacksRef.current.onModelLoadStatus?.({ loading: true, error: null });
       try {
         const loaded = await loadNormalizedGLBCharacter(targetUrl, 1.55);
+        // 로딩 중에 다른 모델이 요청되었거나 컴포넌트가 해제되었다면 결과를 즉시 폐기
+        if (token !== glbLoadToken) {
+          loaded.mixer?.stopAllAction();
+          disposeObject3D(loaded.wrapper);
+          return;
+        }
         activeGLBChar = loaded;
         lumi.customModelSlot.add(loaded.wrapper);
         lumi.customModelSlot.visible = true;
         lumi.defaultMeshGroup.visible = false;
         callbacksRef.current.onModelLoadStatus?.({ loading: false, error: null });
       } catch {
+        if (token !== glbLoadToken) return;
         lumi.customModelSlot.visible = false;
         lumi.defaultMeshGroup.visible = true;
         callbacksRef.current.onModelLoadStatus?.({
@@ -393,10 +414,15 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
     };
 
     const buildFloorScene = (floorNum: number) => {
+      // 이전 층 오브젝트를 씬에서 제거한 뒤 GPU 메모리(Geometry/Material)까지 해제
+      // (공유 캐시 재질·텍스처는 markShared 표시로 보존되어 다음 층에서 재사용)
       while (levelGroup.children.length > 0) {
         const child = levelGroup.children[0];
         levelGroup.remove(child);
+        disposeObject3D(child);
       }
+      goldenKeyObj = null;
+      exitPortalObj = null;
 
       const bp = getFloorBlueprint(floorNum);
       staticBoxes = [];
@@ -1190,6 +1216,21 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
       window.removeEventListener('resize', onResize);
+
+      // 진행 중인 GLB 비동기 로딩 결과를 무효화하고 모든 GPU 자원 해제
+      glbLoadToken++;
+      releaseActiveGLBModel();
+      scene.remove(levelGroup, lumi.root, dropShadow, skyEnv.root);
+      disposeObject3D(levelGroup);
+      disposeObject3D(lumi.root);
+      disposeObject3D(dropShadow);
+      disposeObject3D(skyEnv.root);
+      for (const p of particlePool) {
+        scene.remove(p.mesh);
+        (p.mesh.material as THREE.Material).dispose();
+      }
+      partGeo.dispose();
+
       renderer.dispose();
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);

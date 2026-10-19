@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PlatformSurfaceTheme } from './levels';
 import { getSharedPlatformTexture } from './textures';
+import { markShared } from './dispose';
 
 export interface LumiRig {
   root: THREE.Group;
@@ -286,9 +287,9 @@ function getPlatformThemeMaterials(
   const map = getSharedPlatformTexture(theme);
 
   const mats: CachedThemeMaterials = {
-    topMat: new THREE.MeshLambertMaterial({ map }),
-    bodyMat: new THREE.MeshLambertMaterial({ color: colors.body }),
-    rimMat: new THREE.MeshLambertMaterial({ color: colors.trim }),
+    topMat: markShared(new THREE.MeshLambertMaterial({ map })),
+    bodyMat: markShared(new THREE.MeshLambertMaterial({ color: colors.body })),
+    rimMat: markShared(new THREE.MeshLambertMaterial({ color: colors.trim })),
   };
 
   platformMaterialCache.set(theme, mats);
@@ -346,13 +347,15 @@ let sharedBeamMats: {
 function getSharedBeamMaterials() {
   if (!sharedBeamMats) {
     sharedBeamMats = {
-      baseMat: new THREE.MeshLambertMaterial({ color: 0x334155 }),
-      hazardMat: new THREE.MeshLambertMaterial({
-        color: 0xf43f5e,
-        emissive: 0xe11d48,
-        emissiveIntensity: 0.2,
-      }),
-      stripeMat: new THREE.MeshLambertMaterial({ color: 0xfbbf24 }),
+      baseMat: markShared(new THREE.MeshLambertMaterial({ color: 0x334155 })),
+      hazardMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0xf43f5e,
+          emissive: 0xe11d48,
+          emissiveIntensity: 0.2,
+        })
+      ),
+      stripeMat: markShared(new THREE.MeshLambertMaterial({ color: 0xfbbf24 })),
     };
   }
   return sharedBeamMats;
@@ -620,18 +623,24 @@ let sharedDamageZoneResources: {
 function getSharedDamageZoneResources() {
   if (!sharedDamageZoneResources) {
     sharedDamageZoneResources = {
-      frameMat: new THREE.MeshLambertMaterial({
-        color: 0xfbbf24,
-      }),
-      lavaMat: new THREE.MeshBasicMaterial({
-        color: 0xf97316,
-      }),
-      spikeMat: new THREE.MeshLambertMaterial({
-        color: 0xe11d48,
-        emissive: 0x9f1239,
-        emissiveIntensity: 0.35,
-      }),
-      spikeGeo: new THREE.ConeGeometry(0.18, 0.34, 5),
+      frameMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0xfbbf24,
+        })
+      ),
+      lavaMat: markShared(
+        new THREE.MeshBasicMaterial({
+          color: 0xf97316,
+        })
+      ),
+      spikeMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0xe11d48,
+          emissive: 0x9f1239,
+          emissiveIntensity: 0.35,
+        })
+      ),
+      spikeGeo: markShared(new THREE.ConeGeometry(0.18, 0.34, 5)),
     };
   }
   return sharedDamageZoneResources;
