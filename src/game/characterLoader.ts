@@ -13,42 +13,42 @@ export interface CharacterPreset {
 
 export const CHARACTER_PRESETS: CharacterPreset[] = [
   {
-    id: 'rae-red-panda',
-    name: '레서판다 대원 레이',
-    role: '탐험 대장',
-    species: '래서판다 탐험가',
+    id: 'frog-real',
+    name: '폴짝 개구리',
+    role: '연못 점프왕',
+    species: '참개구리',
+    badgeColor: '#22c55e',
+    modelFile: 'models/frog-real.glb',
+  },
+  {
+    id: 'flamingo-real',
+    name: '실제 홍학',
+    role: '하늘 비행대',
+    species: '분홍 플라밍고',
+    badgeColor: '#ec4899',
+    modelFile: 'models/flamingo-real.glb',
+  },
+  {
+    id: 'fox',
+    name: '붉은 여우',
+    role: '숲속 추격자',
+    species: '야생 여우',
     badgeColor: '#f97316',
-    modelFile: 'models/rae-red-panda.glb',
+    modelFile: 'models/fox.glb',
   },
   {
     id: 'finn-frog',
     name: '개구리 대원 핀',
     role: '점프 전문가',
     species: '개구리 탐험가',
-    badgeColor: '#22c55e',
+    badgeColor: '#10b981',
     modelFile: 'models/finn-frog.glb',
   },
   {
-    id: 'fernando-flamingo',
-    name: '플라밍고 대원 페르난도',
-    role: '하늘 정찰대',
-    species: '플라밍고 탐험가',
-    badgeColor: '#ec4899',
-    modelFile: 'models/fernando-flamingo.glb',
-  },
-  {
-    id: 'barbara-bee',
-    name: '꿀벌 대원 바바라',
-    role: '비행 엔지니어',
-    species: '꿀벌 탐험가',
-    badgeColor: '#eab308',
-    modelFile: 'models/barbara-bee.glb',
-  },
-  {
     id: 'shiba-inu',
-    name: '시바견 대원 시로',
+    name: '시바견',
     role: '구조 파트너',
-    species: '강아지 대원',
+    species: '시바견 대원',
     badgeColor: '#f59e0b',
     modelFile: 'models/shiba-inu.glb',
   },
@@ -290,16 +290,16 @@ export async function loadNormalizedGLBCharacter(
 
     const idleClip =
       findExactOrPartial(
-        ['Idle', 'Wave', 'Stand'],
-        ['idle', 'stand', 'wait', 'breath']
+        ['Idle', 'Frog_Idle', 'Wave', 'Stand'],
+        ['idle', 'stand', 'wait', 'breath', 'fly']
       ) ?? clips[0];
     const walkClip =
       findExactOrPartial(
-        ['Run', 'Gallop', 'Walk'],
-        ['run', 'gallop', 'walk', 'move', 'jog']
-      ) ?? clips[Math.min(1, clips.length - 1)];
+        ['Run', 'Gallop', 'Frog_Jump', 'Walk'],
+        ['run', 'gallop', 'frog_jump', 'walk', 'move', 'jog', 'hop']
+      );
     const jumpClip = findExactOrPartial(
-      ['Jump_Idle', 'Jump', 'Gallop_Jump', 'Jump_ToIdle'],
+      ['Jump_Idle', 'Frog_Jump', 'Jump', 'Gallop_Jump', 'Jump_ToIdle'],
       ['jump', 'air', 'hop', 'fall']
     );
 
@@ -310,7 +310,7 @@ export async function loadNormalizedGLBCharacter(
     if (walkClip && walkClip !== idleClip) {
       walkAction = mixer.clipAction(walkClip);
     }
-    if (jumpClip) {
+    if (jumpClip && jumpClip !== idleClip) {
       jumpAction = mixer.clipAction(jumpClip);
     }
   }
@@ -353,6 +353,13 @@ export function updateGLBCharacterAnimation(
       }
       desiredAction.reset().fadeIn(0.18).play();
       customChar.activeAction = desiredAction;
+    }
+
+    // 단일 클립 비행 캐릭터(실제 홍학 등)는 이동/점프 시 날갯짓 속도를 높여 생동감 부여
+    if (!customChar.actions.walk && !customChar.actions.jump) {
+      customChar.mixer.timeScale = !isGrounded ? 1.45 : isMoving ? 1.25 : 0.85;
+    } else {
+      customChar.mixer.timeScale = 1.0;
     }
 
     customChar.mixer.update(dt);

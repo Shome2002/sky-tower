@@ -14,6 +14,15 @@ export interface SaveData {
 
 const SAVE_STORAGE_KEY = 'sky_tower_save_v1';
 
+const VALID_CHARACTER_IDS = new Set([
+  'frog-real',
+  'flamingo-real',
+  'fox',
+  'finn-frog',
+  'shiba-inu',
+  'lumi-default',
+]);
+
 const DEFAULT_SAVE_DATA: SaveData = {
   maxUnlockedFloor: 1,
   clearedFloors: [],
@@ -22,7 +31,7 @@ const DEFAULT_SAVE_DATA: SaveData = {
   lastPlayedFloor: 1,
   lowResMode: true,
   fps30Cap: true,
-  selectedCharacterId: 'rae-red-panda',
+  selectedCharacterId: 'frog-real',
 };
 
 export function loadSaveData(): SaveData {
@@ -52,9 +61,9 @@ export function loadSaveData(): SaveData {
         typeof parsed.fps30Cap === 'boolean' ? parsed.fps30Cap : true,
       selectedCharacterId:
         typeof parsed.selectedCharacterId === 'string' &&
-        parsed.selectedCharacterId.length > 0
+        VALID_CHARACTER_IDS.has(parsed.selectedCharacterId)
           ? parsed.selectedCharacterId
-          : 'rae-red-panda',
+          : 'frog-real',
     };
   } catch {
     return { ...DEFAULT_SAVE_DATA };

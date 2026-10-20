@@ -580,7 +580,7 @@ export default function App() {
                       <span className="text-amber-300">
                         {modelLoading
                           ? '3D 캐릭터 불러오는 중...'
-                          : customModelName ?? '레서판다 대원 레이'}
+                          : customModelName ?? '폴짝 개구리'}
                       </span>
                     </div>
                   </div>
