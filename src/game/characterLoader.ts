@@ -71,6 +71,7 @@ export interface LoadedGLBCharacter {
     jump: THREE.AnimationAction | null;
   };
   activeAction: THREE.AnimationAction | null;
+  isHopper: boolean;
 }
 
 let sharedLoader: GLTFLoader | null = null;
@@ -243,8 +244,14 @@ export async function loadNormalizedGLBCharacter(
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
 
+  const lowerUrl = url.toLowerCase();
+  const isFlamingo = lowerUrl.includes('flamingo-real');
+  const isHopper = lowerUrl.includes('frog-real');
+
+  // 실제 홍학(flamingo-real)은 긴 날개 폭 때문에 기본 정규화 시 몸통이 작아 보이므로 크기를 3배로 확대
+  const effectiveTargetSize = isFlamingo ? targetHeight * 3.0 : targetHeight;
   const maxAxis = Math.max(size.y, size.x, size.z, 0.001);
-  const scaleFactor = targetHeight / maxAxis;
+  const scaleFactor = effectiveTargetSize / maxAxis;
   model.scale.setScalar(scaleFactor);
 
   // Recompute box after scaling so feet sit flush at y = 0
@@ -309,9 +316,23 @@ export async function loadNormalizedGLBCharacter(
     }
     if (walkClip && walkClip !== idleClip) {
       walkAction = mixer.clipAction(walkClip);
+      if (isHopper) {
+        walkAction.timeScale = 1.65;
+      }
     }
     if (jumpClip && jumpClip !== idleClip) {
-      jumpAction = mixer.clipAction(jumpClip);
+      // walk와 jump가 동일한 클립(예: Frog_Jump)일 때 별도 클립으로 복제하여 이동 중 점프 전환이 즉시 작동하도록 분리
+      const distinctJumpClip =
+        jumpClip === walkClip ? jumpClip.clone() : jumpClip;
+      if (distinctJumpClip === jumpClip && jumpClip === walkClip) {
+        distinctJumpClip.name = `${jumpClip.name}_JumpAction`;
+      } else if (jumpClip === walkClip) {
+        distinctJumpClip.name = `${jumpClip.name}_JumpAction`;
+      }
+      jumpAction = mixer.clipAction(distinctJumpClip);
+      if (isHopper) {
+        jumpAction.timeScale = 1.35;
+      }
     }
   }
 
@@ -324,6 +345,7 @@ export async function loadNormalizedGLBCharacter(
       jump: jumpAction,
     },
     activeAction: idleAction,
+    isHopper,
   };
 }
 
@@ -348,10 +370,30 @@ export function updateGLBCharacterAnimation(
     }
 
     if (desiredAction && desiredAction !== customChar.activeAction) {
+      const isEnteringJump = desiredAction === customChar.actions.jump;
+      const isEnteringHopWalk =
+        customChar.isHopper && desiredAction === customChar.actions.walk;
+
+      // 점프 키 입력 또는 폴짝 개구리 이동 시작 시 크로스페이드 딜레이를 0.04초로 최소화
+      const fadeDuration = isEnteringJump || isEnteringHopWalk ? 0.04 : 0.14;
+
       if (customChar.activeAction) {
-        customChar.activeAction.fadeOut(0.18);
+        customChar.activeAction.fadeOut(fadeDuration);
       }
-      desiredAction.reset().fadeIn(0.18).play();
+      desiredAction.reset();
+
+      if (isEnteringHopWalk) {
+        // Frog_Jump 초반 바닥 웅크림(0.0~0.21s) 구간을 건너뛰어 미끄러짐 없이 첫 프레임부터 즉시 도약
+        desiredAction.time = 0.22;
+      } else if (isEnteringJump) {
+        // 점프 버튼 입력 시 모든 캐릭터의 초반 준비 동작 딜레이를 건너뛰어 즉각 공중 도약 포즈 재생
+        const clipDur = desiredAction.getClip().duration;
+        desiredAction.time = customChar.isHopper
+          ? 0.22
+          : Math.min(0.12, clipDur * 0.2);
+      }
+
+      desiredAction.fadeIn(fadeDuration).play();
       customChar.activeAction = desiredAction;
     }
 
@@ -363,6 +405,30 @@ export function updateGLBCharacterAnimation(
     }
 
     customChar.mixer.update(dt);
+
+    // 폴짝 개구리(isHopper)가 지면 이동 중이거나 체공 중일 때 바닥 정지 프레임을 생략하여 연속 점프 유지
+    if (customChar.isHopper) {
+      if (
+        customChar.activeAction === customChar.actions.walk &&
+        customChar.actions.walk
+      ) {
+        if (
+          customChar.actions.walk.time > 0.72 ||
+          customChar.actions.walk.time < 0.20
+        ) {
+          customChar.actions.walk.time = 0.20;
+        }
+      } else if (
+        customChar.activeAction === customChar.actions.jump &&
+        customChar.actions.jump &&
+        !isGrounded
+      ) {
+        // 공중에 떠 있는 동안에는 착지 후 정지 프레임(0.60s 이후)으로 넘어가지 않고 도약 포즈 유지
+        if (customChar.actions.jump.time > 0.58) {
+          customChar.actions.jump.time = 0.58;
+        }
+      }
+    }
   }
 
   // If the GLB has no walk animation clip, add gentle procedural hop & sway
