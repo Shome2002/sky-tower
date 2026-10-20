@@ -19,6 +19,7 @@ import {
   LumiRig,
 } from '../game/models';
 import { createSkyEnvironment } from '../game/environment';
+import { setPlatformTextureAnisotropy } from '../game/textures';
 import {
   LoadedGLBCharacter,
   loadNormalizedGLBCharacter,
@@ -185,10 +186,11 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
     if (!container) return;
 
     // Galaxy Tab S6 Lite (Exynos 9611 / Mali-G72 MP3) Ultra-Light Renderer:
-    // - antialias: false, stencil: false, powerPreference: 'high-performance'
+    // - antialias: true (MSAA - 타일/발판 모서리 계단 현상 제거, 해상도는 그대로 유지)
+    // - stencil: false, powerPreference: 'high-performance'
     // - Internal buffer scaled down to ~1000x600 (600k pixel budget) by default
     const renderer = new THREE.WebGLRenderer({
-      antialias: false,
+      antialias: true,
       stencil: false,
       depth: true,
       powerPreference: 'high-performance',
@@ -197,6 +199,8 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.setPixelRatio(1);
     renderer.shadowMap.enabled = false;
+    // 비등방성 필터링: 기기 GPU가 지원하는 최대치(최대 16x)로 바닥 텍스처에 적용
+    setPlatformTextureAnisotropy(renderer.capabilities.getMaxAnisotropy());
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
     renderer.domElement.style.display = 'block';
@@ -498,13 +502,17 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
       );
       levelGroup.add(goldenKeyObj.root);
 
-      // 6. Exit Portal
+      // 6. Exit Portal (align wide arch front perpendicular to the player's approach direction)
       exitPortalObj = createExitPortalMesh();
       exitPortalObj.root.position.set(
         bp.portalPosition[0],
         bp.portalPosition[1],
         bp.portalPosition[2]
       );
+      const approachDx = bp.portalPosition[0] - bp.keyCheckpointSpawn[0];
+      const approachDz = bp.portalPosition[2] - bp.keyCheckpointSpawn[2];
+      const autoPortalYaw = Math.atan2(-approachDx, -approachDz);
+      exitPortalObj.root.rotation.y = bp.portalYaw ?? autoPortalYaw;
       exitPortalObj.setUnlocked(false);
       levelGroup.add(exitPortalObj.root);
 

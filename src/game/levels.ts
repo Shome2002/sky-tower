@@ -64,6 +64,8 @@ export interface FloorBlueprint {
   keyCheckpointSpawn: [number, number, number];
   /** 출구 포털 발밑 좌표 [x, y, z] */
   portalPosition: [number, number, number];
+  /** 출구 포털 Y축 회전 각도(rad) — 생략 시 열쇠→출구 진행 방향에 맞춰 넓은 정면이 플레이어를 향하도록 자동 정렬 */
+  portalYaw?: number;
   /** 추락 판정 Y 기준선 */
   fallLimitY: number;
   staticPlatforms: StaticPlatformSpec[];

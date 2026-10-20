@@ -8,6 +8,8 @@ export interface SaveData {
   lowResMode: boolean;
   /** true(기본값): 초당 프레임을 30FPS로 고정하여 발열 및 렉 방지 */
   fps30Cap: boolean;
+  /** 선택된 캐릭터 프리셋 ID */
+  selectedCharacterId: string;
 }
 
 const SAVE_STORAGE_KEY = 'sky_tower_save_v1';
@@ -20,6 +22,7 @@ const DEFAULT_SAVE_DATA: SaveData = {
   lastPlayedFloor: 1,
   lowResMode: true,
   fps30Cap: true,
+  selectedCharacterId: 'rae-red-panda',
 };
 
 export function loadSaveData(): SaveData {
@@ -47,6 +50,11 @@ export function loadSaveData(): SaveData {
         typeof parsed.lowResMode === 'boolean' ? parsed.lowResMode : true,
       fps30Cap:
         typeof parsed.fps30Cap === 'boolean' ? parsed.fps30Cap : true,
+      selectedCharacterId:
+        typeof parsed.selectedCharacterId === 'string' &&
+        parsed.selectedCharacterId.length > 0
+          ? parsed.selectedCharacterId
+          : 'rae-red-panda',
     };
   } catch {
     return { ...DEFAULT_SAVE_DATA };

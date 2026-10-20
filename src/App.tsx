@@ -26,6 +26,10 @@ import {
 import { TouchControls, TouchInputRef } from './components/TouchControls';
 import { getFloorBlueprint, TOWER_FLOORS } from './game/levels';
 import {
+  CHARACTER_PRESETS,
+  CharacterPreset,
+} from './game/characterLoader';
+import {
   loadSaveData,
   recordFloorCleared,
   resetSaveData,
@@ -53,9 +57,23 @@ export default function App() {
     height: number;
   }>({ width: 1000, height: 600 });
 
-  // External GLB character model state
-  const [customModelUrl, setCustomModelUrl] = useState<string | null>(null);
-  const [customModelName, setCustomModelName] = useState<string | null>(null);
+  // External GLB character model state (initialized from saved preset)
+  const [customModelUrl, setCustomModelUrl] = useState<string | null>(() => {
+    const initial = loadSaveData();
+    const preset =
+      CHARACTER_PRESETS.find((p) => p.id === initial.selectedCharacterId) ??
+      CHARACTER_PRESETS[0];
+    return preset.modelFile
+      ? `${import.meta.env.BASE_URL}${preset.modelFile}`
+      : null;
+  });
+  const [customModelName, setCustomModelName] = useState<string | null>(() => {
+    const initial = loadSaveData();
+    const preset =
+      CHARACTER_PRESETS.find((p) => p.id === initial.selectedCharacterId) ??
+      CHARACTER_PRESETS[0];
+    return `${preset.name} (${preset.role})`;
+  });
   const [modelLoading, setModelLoading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -82,29 +100,27 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  // Optional auto-detection if user placed /public/models/character.glb
-  useEffect(() => {
-    let cancelled = false;
-    const defaultGlbPath = `${import.meta.env.BASE_URL}models/character.glb`;
-    fetch(defaultGlbPath, { method: 'HEAD' })
-      .then((res) => {
-        const contentType = res.headers.get('content-type') || '';
-        if (
-          !cancelled &&
-          res.ok &&
-          !contentType.includes('text/html')
-        ) {
-          setCustomModelUrl(defaultGlbPath);
-          setCustomModelName('character.glb (기본 프로젝트 모델)');
-        }
-      })
-      .catch(() => {
-        // Use procedural art-toy Lumi when no static character.glb is present
-      });
-    return () => {
-      cancelled = true;
+  const handleSelectCharacterPreset = (preset: CharacterPreset) => {
+    soundFX.playClick();
+    if (customModelUrl && customModelUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(customModelUrl);
+    }
+    const nextUrl = preset.modelFile
+      ? `${import.meta.env.BASE_URL}${preset.modelFile}`
+      : null;
+    setCustomModelUrl(nextUrl);
+    setCustomModelName(`${preset.name} (${preset.role})`);
+    const updated: SaveData = {
+      ...saveData,
+      selectedCharacterId: preset.id,
     };
-  }, []);
+    setSaveData(updated);
+    writeSaveData(updated);
+    triggerNotice(
+      `출동 준비 완료! [${preset.name} · ${preset.role}] 대원으로 변경되었습니다!`,
+      2600
+    );
+  };
 
   const handleGLBFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -115,18 +131,21 @@ export default function App() {
     const blobUrl = URL.createObjectURL(file);
     setCustomModelUrl(blobUrl);
     setCustomModelName(file.name);
+    const updated: SaveData = {
+      ...saveData,
+      selectedCharacterId: 'custom-upload',
+    };
+    setSaveData(updated);
+    writeSaveData(updated);
     triggerNotice(`3D 캐릭터 모델(${file.name})을 불러왔습니다!`, 2800);
     e.target.value = '';
   };
 
   const handleResetToDefaultCharacter = () => {
-    soundFX.playClick();
-    if (customModelUrl && customModelUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(customModelUrl);
-    }
-    setCustomModelUrl(null);
-    setCustomModelName(null);
-    triggerNotice('기본 아트토이 캐릭터(루미)로 변경되었습니다.', 2400);
+    const defaultPreset =
+      CHARACTER_PRESETS.find((p) => p.id === 'lumi-default') ??
+      CHARACTER_PRESETS[CHARACTER_PRESETS.length - 1];
+    handleSelectCharacterPreset(defaultPreset);
   };
 
   const handleModelLoadStatus = useCallback(
@@ -548,45 +567,64 @@ export default function App() {
               </div>
             </div>
 
-            {/* 외부 3D 캐릭터(GLB) 로더 컨트롤 패널 */}
-            <div className="mt-3 rounded-2xl bg-slate-800/90 border border-slate-700 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/40 text-sky-300 flex items-center justify-center shrink-0">
-                  <Box className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-white">
-                    <span>현재 캐릭터 모델:</span>
-                    <span className="text-sky-300">
-                      {modelLoading
-                        ? 'GLB 불러오는 중...'
-                        : customModelName ?? '별빛 탐험가 루미 (기본 아트토이)'}
-                    </span>
+            {/* 동물 탐험대 3D 캐릭터 선택 패널 */}
+            <div className="mt-3 rounded-2xl bg-slate-800/90 border border-sky-400/35 p-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/20 border border-sky-400/40 text-sky-300 flex items-center justify-center shrink-0">
+                    <Box className="w-4 h-4" />
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    외부 3D 파일(.glb / .gltf)을 업로드하거나 /public/models/character.glb에 넣으면 자동 적용됩니다.
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-white">
+                      <span>출동 탐험대원 선택:</span>
+                      <span className="text-amber-300">
+                        {modelLoading
+                          ? '3D 캐릭터 불러오는 중...'
+                          : customModelName ?? '레서판다 대원 레이'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
+                  className="self-start sm:self-center px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-sky-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  <span>GLB 모델 불러오기</span>
+                  <span>내 .GLB 파일 직접 올리기</span>
                 </button>
-                {customModelUrl && (
-                  <button
-                    type="button"
-                    onClick={handleResetToDefaultCharacter}
-                    className="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs cursor-pointer transition-colors whitespace-nowrap"
-                  >
-                    기본 캐릭터
-                  </button>
-                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {CHARACTER_PRESETS.map((preset) => {
+                  const isSelected = saveData.selectedCharacterId === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handleSelectCharacterPreset(preset)}
+                      className={`text-left rounded-xl p-2.5 border-2 transition-all cursor-pointer flex items-center gap-2.5 ${
+                        isSelected
+                          ? 'bg-sky-950/95 border-amber-400 shadow-md'
+                          : 'bg-slate-900/75 border-slate-700/80 hover:border-slate-500'
+                      }`}
+                    >
+                      <span
+                        className="w-3.5 h-8 rounded-full shrink-0"
+                        style={{ backgroundColor: preset.badgeColor }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs sm:text-sm font-black text-white truncate">
+                          {preset.name}
+                        </div>
+                        <div className="text-[11px] font-bold text-sky-300 truncate">
+                          {preset.role} · {preset.species}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
