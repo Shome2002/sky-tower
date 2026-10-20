@@ -255,11 +255,15 @@ export async function loadNormalizedGLBCharacter(
   model.scale.setScalar(scaleFactor);
 
   // Recompute box after scaling so feet sit flush at y = 0
+  // (홍학은 기본 메쉬 날개 끝 기준 바운딩 박스로 인해 몸통이 공중에 높게 뜨므로 중심점을 지면 가까이 낮춤)
   const scaledBox = new THREE.Box3().setFromObject(model);
   const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+  const groundOffsetY = isFlamingo
+    ? -scaledCenter.y + 0.28
+    : -scaledBox.min.y;
   model.position.set(
     -scaledCenter.x,
-    -scaledBox.min.y,
+    groundOffsetY,
     -scaledCenter.z
   );
 
@@ -423,9 +427,10 @@ export function updateGLBCharacterAnimation(
         customChar.actions.jump &&
         !isGrounded
       ) {
-        // 공중에 떠 있는 동안에는 착지 후 정지 프레임(0.60s 이후)으로 넘어가지 않고 도약 포즈 유지
-        if (customChar.actions.jump.time > 0.58) {
-          customChar.actions.jump.time = 0.58;
+        // 공중에 떠 있는 동안에는 다리를 다시 접는 프레임(0.38s 이후)으로 넘어가지 않고
+        // 뒷다리를 쭉 뻗은 최대 도약 프레임(0.34s)을 착지 직전까지 고정 유지
+        if (customChar.actions.jump.time > 0.34) {
+          customChar.actions.jump.time = 0.34;
         }
       }
     }
