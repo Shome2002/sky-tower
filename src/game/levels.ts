@@ -49,6 +49,16 @@ export interface DamageZoneSpec {
   size: [number, number];
 }
 
+export interface JumpPadSpec {
+  id: string;
+  /** 점프 버튼 바닥 중심 좌표 [x, surfaceY, z] */
+  position: [number, number, number];
+  /** 버튼 반지름 (기본값 1.15m) */
+  radius?: number;
+  /** 수직 상승 속도 (기본값 18.5 — 통상 점프 높이의 3배 이상 수직 상승) */
+  boostVelocityY?: number;
+}
+
 export interface FloorBlueprint {
   floorNumber: number;
   title: string;
@@ -73,6 +83,8 @@ export interface FloorBlueprint {
   rotatingBeams: RotatingBeamSpec[];
   /** 밟으면 데미지를 주는 고정 가시/용암 바닥 목록 */
   damageZones?: DamageZoneSpec[];
+  /** 밟으면 즉시 통상 점프의 3배 높이로 솟구치는 점프 버튼 목록 */
+  jumpPads?: JumpPadSpec[];
 }
 
 /**
@@ -743,6 +755,134 @@ export const TOWER_FLOORS: FloorBlueprint[] = [
         id: 'f6-dmg-3',
         position: [-50.4, 7.5, -57.0],
         size: [2.2, 7.0],
+      },
+    ],
+  },
+  {
+    floorNumber: 7,
+    title: '7층 · 슈퍼 점프 스카이 타워',
+    subtitle: '타일 끝의 빛나는 점프 버튼을 밟아 통상 점프의 3배 높이로 솟구쳐 오르세요!',
+    guideHint: '각 타일의 진행 방향 끝에 있는 점프 버튼을 밟으면 머리 위 고공 타일이나 먼 거리 타일로 단숨에 날아오릅니다!',
+    skyTheme: 'day',
+    spawnPoint: [0, 0, 0],
+    keyPosition: [0, 13.2, -35.0],
+    keyCheckpointSpawn: [0, 12.2, -35.0],
+    portalPosition: [46.5, 22.8, -35.0],
+    fallLimitY: -6,
+    staticPlatforms: [
+      {
+        id: 'f7-start',
+        position: [0, 0, 0],
+        size: [9.6, 1.4, 9.6],
+        theme: 'meadow',
+      },
+      {
+        id: 'f7-vertical-step-1',
+        position: [0, 5.2, -7.8],
+        size: [9.8, 1.5, 9.8],
+        theme: 'stone',
+      },
+      {
+        id: 'f7-far-arena-1',
+        position: [0, 6.8, -26.8],
+        size: [10.0, 1.6, 10.0],
+        theme: 'stone',
+      },
+      {
+        id: 'f7-corner-key-island',
+        position: [0, 12.2, -35.0],
+        size: [10.2, 1.7, 10.2],
+        theme: 'gold',
+      },
+      {
+        id: 'f7-east-far-arena',
+        position: [19.2, 13.8, -35.0],
+        size: [10.0, 1.6, 10.0],
+        theme: 'stone',
+      },
+      {
+        id: 'f7-east-vertical-2',
+        position: [27.5, 19.2, -35.0],
+        size: [10.0, 1.6, 9.8],
+        theme: 'stone',
+      },
+      {
+        id: 'f7-goal-island',
+        position: [46.5, 22.8, -35.0],
+        size: [10.2, 1.8, 10.2],
+        theme: 'royal',
+      },
+    ],
+    movingPlatforms: [],
+    rotatingBeams: [
+      {
+        id: 'f7-beam-1',
+        center: [0, 6.8, -26.8],
+        radius: 3.9,
+        beamHeightOffset: 0.52,
+        angularSpeed: 1.5,
+        initialAngle: 0,
+        armType: 'double',
+      },
+      {
+        id: 'f7-beam-2',
+        center: [19.2, 13.8, -35.0],
+        radius: 3.9,
+        beamHeightOffset: 0.52,
+        angularSpeed: -1.6,
+        initialAngle: Math.PI / 3,
+        armType: 'double',
+      },
+    ],
+    damageZones: [
+      {
+        id: 'f7-dmg-1',
+        position: [27.5, 19.2, -35.0],
+        size: [2.0, 6.8],
+      },
+    ],
+    jumpPads: [
+      {
+        // 1번 타일 북쪽(-Z) 진행 방향 끝 -> 바로 위(+5.2m 수직 상승) 2번 타일로 점프
+        id: 'f7-pad-1',
+        position: [0, 0, -3.5],
+        radius: 1.15,
+        boostVelocityY: 18.5,
+      },
+      {
+        // 2번 타일 북쪽(-Z) 진행 방향 끝 -> 멀리 떨어진(15.4m 거리) 3번 아레나 타일로 장거리 점프
+        id: 'f7-pad-2',
+        position: [0, 5.2, -11.4],
+        radius: 1.15,
+        boostVelocityY: 18.5,
+      },
+      {
+        // 3번 타일 북쪽(-Z) 진행 방향 끝 -> 바로 위(+5.4m 수직 상승) 4번 황금 열쇠 코너 섬으로 점프
+        id: 'f7-pad-3',
+        position: [0, 6.8, -30.5],
+        radius: 1.15,
+        boostVelocityY: 18.5,
+      },
+      {
+        // 4번 코너 섬 동쪽(+X) 진행 방향 끝 -> 멀리 떨어진(15.4m 거리) 5번 동쪽 아레나로 장거리 점프
+        id: 'f7-pad-4',
+        position: [3.8, 12.2, -35.0],
+        radius: 1.15,
+        boostVelocityY: 18.5,
+      },
+      {
+        // 5번 타일 동쪽(+X) 진행 방향 끝 -> 바로 위(+5.4m 수직 상승) 6번 고공 타일로 점프
+        id: 'f7-pad-5',
+        position: [22.9, 13.8, -35.0],
+        radius: 1.15,
+        boostVelocityY: 18.5,
+      },
+      {
+        // 6번 타일 동쪽(+X) 진행 방향 끝 -> 멀리 위쪽(+3.6m & 15.3m 거리) 7번 최정상 출구 섬으로 점프
+        id: 'f7-pad-6',
+        position: [31.2, 19.2, -35.0],
+        radius: 1.15,
+        boostVelocityY: 18.5,
       },
     ],
   },

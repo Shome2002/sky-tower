@@ -692,3 +692,109 @@ export function createDamageZoneMesh(size: [number, number]): THREE.Group {
   return group;
 }
 
+let sharedJumpPadResources: {
+  baseMat: THREE.MeshLambertMaterial;
+  springMat: THREE.MeshLambertMaterial;
+  capMat: THREE.MeshLambertMaterial;
+  emblemMat: THREE.MeshBasicMaterial;
+  ringMat: THREE.MeshBasicMaterial;
+} | null = null;
+
+function getSharedJumpPadResources() {
+  if (!sharedJumpPadResources) {
+    sharedJumpPadResources = {
+      baseMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0x334155,
+        })
+      ),
+      springMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0xfacc15,
+          emissive: 0xd97706,
+          emissiveIntensity: 0.3,
+        })
+      ),
+      capMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0x06b6d4,
+          emissive: 0x0891b2,
+          emissiveIntensity: 0.45,
+        })
+      ),
+      emblemMat: markShared(
+        new THREE.MeshBasicMaterial({
+          color: 0xfef08a,
+        })
+      ),
+      ringMat: markShared(
+        new THREE.MeshBasicMaterial({
+          color: 0x22d3ee,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.8,
+        })
+      ),
+    };
+  }
+  return sharedJumpPadResources;
+}
+
+/**
+ * 밟으면 즉시 통상 점프의 3배 높이로 솟구치는 슈퍼 점프 버튼 (Jump Pad)
+ */
+export function createJumpPadMesh(radius = 1.15): {
+  root: THREE.Group;
+  buttonCap: THREE.Group;
+  pulseRing: THREE.Mesh;
+} {
+  const root = new THREE.Group();
+  const { baseMat, springMat, capMat, emblemMat, ringMat } =
+    getSharedJumpPadResources();
+
+  // Outer metallic housing rim on floor
+  const basePlate = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 0.96, radius * 1.08, 0.14, 16),
+    baseMat
+  );
+  basePlate.position.y = 0.07;
+  root.add(basePlate);
+
+  // Inner golden spring coil cylinder
+  const springCoil = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 0.58, radius * 0.65, 0.22, 12),
+    springMat
+  );
+  springCoil.position.y = 0.16;
+  root.add(springCoil);
+
+  // Movable glowing cyan button cap + star/arrow emblem
+  const buttonCap = new THREE.Group();
+  buttonCap.position.y = 0.26;
+  root.add(buttonCap);
+
+  const capDisc = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 0.78, radius * 0.84, 0.16, 16),
+    capMat
+  );
+  buttonCap.add(capDisc);
+
+  const innerStar = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 0.42, radius * 0.46, 0.04, 6),
+    emblemMat
+  );
+  innerStar.position.y = 0.09;
+  buttonCap.add(innerStar);
+
+  // Glowing outer pulse ring
+  const pulseRing = new THREE.Mesh(
+    new THREE.RingGeometry(radius * 1.05, radius * 1.24, 20),
+    ringMat
+  );
+  pulseRing.rotation.x = -Math.PI / 2;
+  pulseRing.position.y = 0.04;
+  root.add(pulseRing);
+
+  return { root, buttonCap, pulseRing };
+}
+

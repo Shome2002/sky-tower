@@ -43,6 +43,26 @@ class SoundSystem {
     osc.stop(now + 0.18);
   }
 
+  public playSpringJump(): void {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(240, now);
+    osc.frequency.exponentialRampToValueAtTime(560, now + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(1120, now + 0.32);
+
+    gain.gain.setValueAtTime(0.24, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.35);
+  }
+
   public playLand(): void {
     const ctx = this.getContext();
     if (!ctx) return;

@@ -5,6 +5,7 @@ import {
   evaluateMovingPlatformPos,
   evaluateRotatingBeamAngle,
   getFloorBlueprint,
+  JumpPadSpec,
   MovingPlatformSpec,
   RotatingBeamSpec,
 } from '../game/levels';
@@ -13,6 +14,7 @@ import {
   createDropShadowRing,
   createExitPortalMesh,
   createGoldenKeyMesh,
+  createJumpPadMesh,
   createLumiCharacter,
   createPlatformMesh,
   createRotatingBeamMesh,
@@ -67,6 +69,15 @@ interface ActiveBeamHazard {
   root: THREE.Group;
   spinner: THREE.Group;
   currentAngle: number;
+}
+
+interface ActiveJumpPad {
+  spec: JumpPadSpec;
+  root: THREE.Group;
+  buttonCap: THREE.Group;
+  pulseRing: THREE.Mesh;
+  bounceTimer: number;
+  cooldown: number;
 }
 
 interface BurstParticle {
@@ -388,6 +399,7 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
     let movingBoxes: ActivePlatformBox[] = [];
     let beamHazards: ActiveBeamHazard[] = [];
     let damageZones: DamageZoneSpec[] = [];
+    let jumpPads: ActiveJumpPad[] = [];
     let goldenKeyObj: ReturnType<typeof createGoldenKeyMesh> | null = null;
     let exitPortalObj: ReturnType<typeof createExitPortalMesh> | null = null;
 
@@ -433,6 +445,7 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
       movingBoxes = [];
       beamHazards = [];
       damageZones = bp.damageZones ? [...bp.damageZones] : [];
+      jumpPads = [];
 
       // Update Floor Sky Time-of-Day Theme (1층/3층: 맑은 낮, 2층: 황금 노을, 4층: 별빛 밤하늘)
       skyEnv.setTheme(bp.skyTheme, scene, dirLight, hemiLight);
@@ -491,6 +504,25 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
         const dzMesh = createDamageZoneMesh(dz.size);
         dzMesh.position.set(dz.position[0], dz.position[1], dz.position[2]);
         levelGroup.add(dzMesh);
+      }
+
+      // 4.5. Super Jump Buttons (Jump Pads)
+      if (bp.jumpPads) {
+        for (const jp of bp.jumpPads) {
+          const { root, buttonCap, pulseRing } = createJumpPadMesh(
+            jp.radius ?? 1.15
+          );
+          root.position.set(jp.position[0], jp.position[1], jp.position[2]);
+          levelGroup.add(root);
+          jumpPads.push({
+            spec: jp,
+            root,
+            buttonCap,
+            pulseRing,
+            bounceTimer: 0,
+            cooldown: 0,
+          });
+        }
       }
 
       // 5. Single Golden Key
@@ -920,6 +952,41 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
           dropShadow.visible = false;
         }
 
+        // 5.5 Super Jump Button (Jump Pad) Trigger: stepping on a button launches 3x jump height
+        for (const pad of jumpPads) {
+          if (pad.cooldown > 0) {
+            pad.cooldown = Math.max(0, pad.cooldown - dt);
+          }
+          const padRadius = (pad.spec.radius ?? 1.15) + 0.24;
+          const dx = sim.playerPos.x - pad.spec.position[0];
+          const dz = sim.playerPos.z - pad.spec.position[2];
+          const surfY = pad.spec.position[1];
+          if (
+            pad.cooldown <= 0 &&
+            Math.hypot(dx, dz) <= padRadius &&
+            sim.playerPos.y >= surfY - 0.2 &&
+            sim.playerPos.y <= surfY + 0.45
+          ) {
+            sim.playerVel.y = pad.spec.boostVelocityY ?? 18.5;
+            sim.isGrounded = false;
+            sim.coyoteTimer = 0;
+            sim.jumpBufferTimer = 0;
+            sim.standingPlatform = null;
+            sim.squashScaleY = 1.42;
+            pad.cooldown = 0.25;
+            pad.bounceTimer = 0.36;
+            soundFX.playSpringJump();
+            spawnBurst(
+              pad.spec.position[0],
+              pad.spec.position[1] + 0.28,
+              pad.spec.position[2],
+              0x22d3ee,
+              10
+            );
+            break;
+          }
+        }
+
         // 6. Rotating Beam Hazard Collision Check
         if (sim.invincibleTimer <= 0) {
           for (const bh of beamHazards) {
@@ -1140,6 +1207,19 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
         exitPortalObj.innerVortex.scale.setScalar(
           1 + Math.sin(t * 3.5) * 0.04
         );
+      }
+
+      for (const pad of jumpPads) {
+        const ringPulse = 1 + Math.sin(t * 5.2) * 0.08;
+        pad.pulseRing.scale.set(ringPulse, ringPulse, 1);
+        if (pad.bounceTimer > 0) {
+          pad.bounceTimer = Math.max(0, pad.bounceTimer - dt);
+          const prog = 1 - pad.bounceTimer / 0.36;
+          pad.buttonCap.position.y =
+            0.26 + Math.sin(prog * Math.PI * 2.5) * 0.14 * (1 - prog);
+        } else {
+          pad.buttonCap.position.y = 0.26;
+        }
       }
 
       for (const p of particlePool) {

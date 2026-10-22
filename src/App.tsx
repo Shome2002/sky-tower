@@ -700,7 +700,14 @@ export default function App() {
                       </div>
 
                       <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-300">
-                        {floor.floorNumber === 5 ? (
+                        {floor.floorNumber === 7 ? (
+                          <>
+                            <Sun className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+                            <span className="text-cyan-200 truncate">
+                              맑은 하늘 · 3배 점프 버튼 & 수직 고공 타워
+                            </span>
+                          </>
+                        ) : floor.floorNumber === 5 ? (
                           <>
                             <Sunset className="w-3.5 h-3.5 text-orange-400 shrink-0" />
                             <span className="truncate">노을 하늘 · 대형 타일 & 롱 코스</span>
