@@ -743,7 +743,7 @@ function getSharedJumpPadResources() {
 /**
  * 밟으면 즉시 통상 점프의 3배 높이로 솟구치는 슈퍼 점프 버튼 (Jump Pad)
  */
-export function createJumpPadMesh(radius = 1.15): {
+export function createJumpPadMesh(radius = 0.76): {
   root: THREE.Group;
   buttonCap: THREE.Group;
   pulseRing: THREE.Mesh;

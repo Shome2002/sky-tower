@@ -765,9 +765,9 @@ export const TOWER_FLOORS: FloorBlueprint[] = [
     guideHint: '각 타일의 진행 방향 끝에 있는 점프 버튼을 밟으면 머리 위 고공 타일이나 먼 거리 타일로 단숨에 날아오릅니다!',
     skyTheme: 'day',
     spawnPoint: [0, 0, 0],
-    keyPosition: [0, 13.2, -35.0],
-    keyCheckpointSpawn: [0, 12.2, -35.0],
-    portalPosition: [46.5, 22.8, -35.0],
+    keyPosition: [0, 13.2, -39.2],
+    keyCheckpointSpawn: [0, 12.2, -39.2],
+    portalPosition: [45.4, 22.8, -39.2],
     fallLimitY: -6,
     staticPlatforms: [
       {
@@ -778,37 +778,37 @@ export const TOWER_FLOORS: FloorBlueprint[] = [
       },
       {
         id: 'f7-vertical-step-1',
-        position: [0, 5.2, -7.8],
+        position: [0, 5.2, -11.0],
         size: [9.8, 1.5, 9.8],
         theme: 'stone',
       },
       {
         id: 'f7-far-arena-1',
-        position: [0, 6.8, -26.8],
+        position: [0, 6.8, -27.9],
         size: [10.0, 1.6, 10.0],
         theme: 'stone',
       },
       {
         id: 'f7-corner-key-island',
-        position: [0, 12.2, -35.0],
+        position: [0, 12.2, -39.2],
         size: [10.2, 1.7, 10.2],
         theme: 'gold',
       },
       {
         id: 'f7-east-far-arena',
-        position: [19.2, 13.8, -35.0],
+        position: [17.1, 13.8, -39.2],
         size: [10.0, 1.6, 10.0],
         theme: 'stone',
       },
       {
         id: 'f7-east-vertical-2',
-        position: [27.5, 19.2, -35.0],
+        position: [28.4, 19.2, -39.2],
         size: [10.0, 1.6, 9.8],
         theme: 'stone',
       },
       {
         id: 'f7-goal-island',
-        position: [46.5, 22.8, -35.0],
+        position: [45.4, 22.8, -39.2],
         size: [10.2, 1.8, 10.2],
         theme: 'royal',
       },
@@ -817,7 +817,7 @@ export const TOWER_FLOORS: FloorBlueprint[] = [
     rotatingBeams: [
       {
         id: 'f7-beam-1',
-        center: [0, 6.8, -26.8],
+        center: [0, 6.8, -27.9],
         radius: 3.9,
         beamHeightOffset: 0.52,
         angularSpeed: 1.5,
@@ -826,7 +826,7 @@ export const TOWER_FLOORS: FloorBlueprint[] = [
       },
       {
         id: 'f7-beam-2',
-        center: [19.2, 13.8, -35.0],
+        center: [17.1, 13.8, -39.2],
         radius: 3.9,
         beamHeightOffset: 0.52,
         angularSpeed: -1.6,
@@ -837,51 +837,51 @@ export const TOWER_FLOORS: FloorBlueprint[] = [
     damageZones: [
       {
         id: 'f7-dmg-1',
-        position: [27.5, 19.2, -35.0],
+        position: [28.4, 19.2, -39.2],
         size: [2.0, 6.8],
       },
     ],
     jumpPads: [
       {
-        // 1번 타일 북쪽(-Z) 진행 방향 끝 -> 바로 위(+5.2m 수직 상승) 2번 타일로 점프
+        // 1번 타일 북쪽(-Z) 진행 방향 끝 -> 수직(+5.2m) & 수평(7.2m 거리 / 중심 간 11.0m) 2번 타일로 상승 점프
         id: 'f7-pad-1',
-        position: [0, 0, -3.5],
-        radius: 1.15,
+        position: [0, 0, -3.8],
+        radius: 0.76,
         boostVelocityY: 18.5,
       },
       {
-        // 2번 타일 북쪽(-Z) 진행 방향 끝 -> 멀리 떨어진(15.4m 거리) 3번 아레나 타일로 장거리 점프
+        // 2번 타일 북쪽(-Z) 진행 방향 끝 -> 멀리 떨어진(13.0m 거리) 3번 아레나 타일로 장거리 점프
         id: 'f7-pad-2',
-        position: [0, 5.2, -11.4],
-        radius: 1.15,
+        position: [0, 5.2, -14.9],
+        radius: 0.76,
         boostVelocityY: 18.5,
       },
       {
-        // 3번 타일 북쪽(-Z) 진행 방향 끝 -> 바로 위(+5.4m 수직 상승) 4번 황금 열쇠 코너 섬으로 점프
+        // 3번 타일 북쪽(-Z) 진행 방향 끝 -> 수직(+5.4m) & 수평(7.3m 거리 / 중심 간 11.3m) 4번 황금 열쇠 코너 섬으로 상승 점프
         id: 'f7-pad-3',
-        position: [0, 6.8, -30.5],
-        radius: 1.15,
+        position: [0, 6.8, -31.9],
+        radius: 0.76,
         boostVelocityY: 18.5,
       },
       {
-        // 4번 코너 섬 동쪽(+X) 진행 방향 끝 -> 멀리 떨어진(15.4m 거리) 5번 동쪽 아레나로 장거리 점프
+        // 4번 코너 섬 동쪽(+X) 진행 방향 끝 -> 멀리 떨어진(13.0m 거리) 5번 동쪽 아레나로 장거리 점프
         id: 'f7-pad-4',
-        position: [3.8, 12.2, -35.0],
-        radius: 1.15,
+        position: [4.1, 12.2, -39.2],
+        radius: 0.76,
         boostVelocityY: 18.5,
       },
       {
-        // 5번 타일 동쪽(+X) 진행 방향 끝 -> 바로 위(+5.4m 수직 상승) 6번 고공 타일로 점프
+        // 5번 타일 동쪽(+X) 진행 방향 끝 -> 수직(+5.4m) & 수평(7.3m 거리 / 중심 간 11.3m) 6번 고공 타일로 상승 점프
         id: 'f7-pad-5',
-        position: [22.9, 13.8, -35.0],
-        radius: 1.15,
+        position: [21.1, 13.8, -39.2],
+        radius: 0.76,
         boostVelocityY: 18.5,
       },
       {
-        // 6번 타일 동쪽(+X) 진행 방향 끝 -> 멀리 위쪽(+3.6m & 15.3m 거리) 7번 최정상 출구 섬으로 점프
+        // 6번 타일 동쪽(+X) 진행 방향 끝 -> 멀리 위쪽(+3.6m & 13.0m 거리) 7번 최정상 출구 섬으로 점프
         id: 'f7-pad-6',
-        position: [31.2, 19.2, -35.0],
-        radius: 1.15,
+        position: [32.4, 19.2, -39.2],
+        radius: 0.76,
         boostVelocityY: 18.5,
       },
     ],

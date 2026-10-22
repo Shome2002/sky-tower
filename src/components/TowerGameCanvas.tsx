@@ -510,7 +510,7 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
       if (bp.jumpPads) {
         for (const jp of bp.jumpPads) {
           const { root, buttonCap, pulseRing } = createJumpPadMesh(
-            jp.radius ?? 1.15
+            jp.radius ?? 0.76
           );
           root.position.set(jp.position[0], jp.position[1], jp.position[2]);
           levelGroup.add(root);
@@ -957,15 +957,15 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
           if (pad.cooldown > 0) {
             pad.cooldown = Math.max(0, pad.cooldown - dt);
           }
-          const padRadius = (pad.spec.radius ?? 1.15) + 0.24;
+          const padRadius = (pad.spec.radius ?? 0.76) + 0.16;
           const dx = sim.playerPos.x - pad.spec.position[0];
           const dz = sim.playerPos.z - pad.spec.position[2];
           const surfY = pad.spec.position[1];
           if (
             pad.cooldown <= 0 &&
             Math.hypot(dx, dz) <= padRadius &&
-            sim.playerPos.y >= surfY - 0.2 &&
-            sim.playerPos.y <= surfY + 0.45
+            sim.playerPos.y >= surfY - 0.18 &&
+            sim.playerPos.y <= surfY + 0.38
           ) {
             sim.playerVel.y = pad.spec.boostVelocityY ?? 18.5;
             sim.isGrounded = false;
