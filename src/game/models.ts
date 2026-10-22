@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PlatformSurfaceTheme } from './levels';
+import { PlatformSurfaceTheme, TimedZoneState } from './levels';
 import { getSharedPlatformTexture } from './textures';
 import { markShared } from './dispose';
 
@@ -796,5 +796,179 @@ export function createJumpPadMesh(radius = 0.76): {
   root.add(pulseRing);
 
   return { root, buttonCap, pulseRing };
+}
+
+let sharedTimedTileResources: {
+  borderMat: THREE.MeshLambertMaterial;
+  greenMat: THREE.MeshLambertMaterial;
+  yellowMat: THREE.MeshLambertMaterial;
+  redMat: THREE.MeshLambertMaterial;
+  spikeYellowMat: THREE.MeshLambertMaterial;
+  spikeRedMat: THREE.MeshLambertMaterial;
+  spikeGeo: THREE.ConeGeometry;
+} | null = null;
+
+function getSharedTimedTileResources() {
+  if (!sharedTimedTileResources) {
+    sharedTimedTileResources = {
+      borderMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0x1e293b,
+        })
+      ),
+      greenMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0x22c55e,
+          emissive: 0x15803d,
+          emissiveIntensity: 0.42,
+        })
+      ),
+      yellowMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0xfacc15,
+          emissive: 0xd97706,
+          emissiveIntensity: 0.58,
+        })
+      ),
+      redMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0xef4444,
+          emissive: 0xb91c1c,
+          emissiveIntensity: 0.72,
+        })
+      ),
+      spikeYellowMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0xfef08a,
+          emissive: 0xca8a04,
+          emissiveIntensity: 0.45,
+        })
+      ),
+      spikeRedMat: markShared(
+        new THREE.MeshLambertMaterial({
+          color: 0xffe4e6,
+          emissive: 0xe11d48,
+          emissiveIntensity: 0.55,
+        })
+      ),
+      spikeGeo: markShared(new THREE.ConeGeometry(0.18, 0.36, 5)),
+    };
+  }
+  return sharedTimedTileResources;
+}
+
+/**
+ * 진행 방향에서 바라봤을 때 가로로 2등분되어
+ * (초록 3 : 노랑 1 : 빨강 2) 비율로 교차 변화하는 시간차 데미지 장판 타일
+ */
+export function createTimedHazardTileMesh(
+  size: [number, number],
+  splitAxis: 'z' | 'x'
+): {
+  root: THREE.Group;
+  setZoneStates: (zone1: TimedZoneState, zone2: TimedZoneState) => void;
+} {
+  const [w, d] = size;
+  const root = new THREE.Group();
+  const res = getSharedTimedTileResources();
+
+  const zoneW = splitAxis === 'x' ? w / 2 : w;
+  const zoneD = splitAxis === 'z' ? d / 2 : d;
+
+  const buildHalfZone = (offsetX: number, offsetZ: number) => {
+    const zoneGroup = new THREE.Group();
+    zoneGroup.position.set(offsetX, 0, offsetZ);
+
+    const frame = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        Math.max(0.4, zoneW - 0.1),
+        0.045,
+        Math.max(0.4, zoneD - 0.1)
+      ),
+      res.borderMat
+    );
+    frame.position.y = 0.022;
+    zoneGroup.add(frame);
+
+    const padW = Math.max(0.4, zoneW - 0.34);
+    const padD = Math.max(0.4, zoneD - 0.34);
+    const padMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(padW, 0.075, padD),
+      res.greenMat
+    );
+    padMesh.position.y = 0.042;
+    zoneGroup.add(padMesh);
+
+    const spikesGroup = new THREE.Group();
+    const spikeMeshes: THREE.Mesh[] = [];
+    const cols = Math.max(2, Math.min(5, Math.round(padW / 1.15)));
+    const rows = Math.max(2, Math.min(4, Math.round(padD / 1.15)));
+    const stepX = padW / cols;
+    const stepZ = padD / rows;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const spike = new THREE.Mesh(res.spikeGeo, res.spikeRedMat);
+        const sx = -padW / 2 + stepX * (c + 0.5);
+        const sz = -padD / 2 + stepZ * (r + 0.5);
+        spike.position.set(sx, 0.22, sz);
+        spikesGroup.add(spike);
+        spikeMeshes.push(spike);
+      }
+    }
+    spikesGroup.visible = false;
+    zoneGroup.add(spikesGroup);
+    root.add(zoneGroup);
+
+    const applyState = (state: TimedZoneState) => {
+      if (state === 'green') {
+        padMesh.material = res.greenMat;
+        spikesGroup.visible = false;
+      } else if (state === 'yellow') {
+        padMesh.material = res.yellowMat;
+        spikesGroup.visible = true;
+        spikesGroup.scale.set(1, 0.38, 1);
+        for (const sm of spikeMeshes) {
+          sm.material = res.spikeYellowMat;
+        }
+      } else {
+        padMesh.material = res.redMat;
+        spikesGroup.visible = true;
+        spikesGroup.scale.set(1, 1, 1);
+        for (const sm of spikeMeshes) {
+          sm.material = res.spikeRedMat;
+        }
+      }
+    };
+
+    return { applyState };
+  };
+
+  // splitAxis === 'z' -> zone1: +d/4 (진입부), zone2: -d/4 (진출부)
+  // splitAxis === 'x' -> zone1: +w/4 (진입부), zone2: -w/4 (진출부)
+  const half1 =
+    splitAxis === 'z'
+      ? buildHalfZone(0, d / 4)
+      : buildHalfZone(w / 4, 0);
+  const half2 =
+    splitAxis === 'z'
+      ? buildHalfZone(0, -d / 4)
+      : buildHalfZone(-w / 4, 0);
+
+  let currentZ1: TimedZoneState | null = null;
+  let currentZ2: TimedZoneState | null = null;
+
+  const setZoneStates = (z1: TimedZoneState, z2: TimedZoneState) => {
+    if (z1 !== currentZ1) {
+      currentZ1 = z1;
+      half1.applyState(z1);
+    }
+    if (z2 !== currentZ2) {
+      currentZ2 = z2;
+      half2.applyState(z2);
+    }
+  };
+
+  return { root, setZoneStates };
 }
 

@@ -4,10 +4,13 @@ import {
   DamageZoneSpec,
   evaluateMovingPlatformPos,
   evaluateRotatingBeamAngle,
+  evaluateTimedHazardTileStates,
   getFloorBlueprint,
   JumpPadSpec,
   MovingPlatformSpec,
   RotatingBeamSpec,
+  TimedHazardTileSpec,
+  TimedZoneState,
 } from '../game/levels';
 import {
   createDamageZoneMesh,
@@ -18,6 +21,7 @@ import {
   createLumiCharacter,
   createPlatformMesh,
   createRotatingBeamMesh,
+  createTimedHazardTileMesh,
   LumiRig,
 } from '../game/models';
 import { createSkyEnvironment } from '../game/environment';
@@ -78,6 +82,14 @@ interface ActiveJumpPad {
   pulseRing: THREE.Mesh;
   bounceTimer: number;
   cooldown: number;
+}
+
+interface ActiveTimedHazardTile {
+  spec: TimedHazardTileSpec;
+  root: THREE.Group;
+  setZoneStates: (z1: TimedZoneState, z2: TimedZoneState) => void;
+  zone1State: TimedZoneState;
+  zone2State: TimedZoneState;
 }
 
 interface BurstParticle {
@@ -400,6 +412,7 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
     let beamHazards: ActiveBeamHazard[] = [];
     let damageZones: DamageZoneSpec[] = [];
     let jumpPads: ActiveJumpPad[] = [];
+    let timedHazardTiles: ActiveTimedHazardTile[] = [];
     let goldenKeyObj: ReturnType<typeof createGoldenKeyMesh> | null = null;
     let exitPortalObj: ReturnType<typeof createExitPortalMesh> | null = null;
 
@@ -446,6 +459,7 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
       beamHazards = [];
       damageZones = bp.damageZones ? [...bp.damageZones] : [];
       jumpPads = [];
+      timedHazardTiles = [];
 
       // Update Floor Sky Time-of-Day Theme (1층/3층: 맑은 낮, 2층: 황금 노을, 4층: 별빛 밤하늘)
       skyEnv.setTheme(bp.skyTheme, scene, dirLight, hemiLight);
@@ -521,6 +535,27 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
             pulseRing,
             bounceTimer: 0,
             cooldown: 0,
+          });
+        }
+      }
+
+      // 4.6. Timed Alternating Hazard Tiles (2-split 3:1:2 Green/Yellow/Red)
+      if (bp.timedHazardTiles) {
+        for (const th of bp.timedHazardTiles) {
+          const { root, setZoneStates } = createTimedHazardTileMesh(
+            th.size,
+            th.splitAxis
+          );
+          root.position.set(th.position[0], th.position[1], th.position[2]);
+          const initialStates = evaluateTimedHazardTileStates(th, 0);
+          setZoneStates(initialStates.zone1, initialStates.zone2);
+          levelGroup.add(root);
+          timedHazardTiles.push({
+            spec: th,
+            root,
+            setZoneStates,
+            zone1State: initialStates.zone1,
+            zone2State: initialStates.zone2,
           });
         }
       }
@@ -778,6 +813,17 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
             sim.floorElapsedTime
           );
           bh.spinner.rotation.y = bh.currentAngle;
+        }
+
+        // 2.5 Update Timed Alternating Hazard Tiles (3:1:2 Green -> Yellow -> Red)
+        for (const th of timedHazardTiles) {
+          const states = evaluateTimedHazardTileStates(
+            th.spec,
+            sim.floorElapsedTime
+          );
+          th.zone1State = states.zone1;
+          th.zone2State = states.zone2;
+          th.setZoneStates(states.zone1, states.zone2);
         }
 
         // 3. Combine Touch Joystick + Keyboard Input
@@ -1070,6 +1116,51 @@ export const TowerGameCanvas: React.FC<TowerGameCanvasProps> = ({
               );
               callbacksRef.current.onLoseHeart();
               break;
+            }
+          }
+        }
+
+        // 6.6 Timed Alternating Hazard Tile Collision Check (Damage only when active zone is 'red')
+        if (sim.invincibleTimer <= 0) {
+          for (const th of timedHazardTiles) {
+            const halfW = th.spec.size[0] / 2 - 0.12;
+            const halfD = th.spec.size[1] / 2 - 0.12;
+            const surfY = th.spec.position[1];
+            const relX = sim.playerPos.x - th.spec.position[0];
+            const relZ = sim.playerPos.z - th.spec.position[2];
+
+            if (
+              Math.abs(relX) <= halfW &&
+              Math.abs(relZ) <= halfD &&
+              sim.playerPos.y >= surfY - 0.15 &&
+              sim.playerPos.y <= surfY + 0.36
+            ) {
+              const activeZoneState =
+                th.spec.splitAxis === 'z'
+                  ? relZ >= 0
+                    ? th.zone1State
+                    : th.zone2State
+                  : relX >= 0
+                  ? th.zone1State
+                  : th.zone2State;
+
+              if (activeZoneState === 'red') {
+                soundFX.playHurt();
+                sim.invincibleTimer = 1.6;
+                sim.shakeTimer = 0.35;
+                sim.playerVel.y = 6.8;
+                sim.isGrounded = false;
+                sim.standingPlatform = null;
+                spawnBurst(
+                  sim.playerPos.x,
+                  sim.playerPos.y + 0.35,
+                  sim.playerPos.z,
+                  0xef4444,
+                  10
+                );
+                callbacksRef.current.onLoseHeart();
+                break;
+              }
             }
           }
         }

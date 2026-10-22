@@ -53,10 +53,30 @@ export interface JumpPadSpec {
   id: string;
   /** 점프 버튼 바닥 중심 좌표 [x, surfaceY, z] */
   position: [number, number, number];
-  /** 버튼 반지름 (기본값 1.15m) */
+  /** 버튼 반지름 (기본값 0.76m) */
   radius?: number;
   /** 수직 상승 속도 (기본값 18.5 — 통상 점프 높이의 3배 이상 수직 상승) */
   boostVelocityY?: number;
+}
+
+export type TimedZoneState = 'green' | 'yellow' | 'red';
+
+export interface TimedHazardTileSpec {
+  id: string;
+  /** 타일 상단 표면 중심 좌표 [x, surfaceY, z] */
+  position: [number, number, number];
+  /** 타일 전체 가로·세로 크기 [width, depth] */
+  size: [number, number];
+  /**
+   * 진행 방향에서 바라봤을 때 가로로 2등분하는 분할 축:
+   * - 'z': 북(-Z) 또는 남(+Z) 진행 시 가로선(X축 평행선)으로 앞/뒤 2등분
+   * - 'x': 동(+X) 또는 서(-X) 진행 시 가로선(Z축 평행선)으로 앞/뒤 2등분
+   */
+  splitAxis: 'z' | 'x';
+  /** 전체 1주기(초록 3 : 노랑 1 : 빨강 2 = 총 6비율) 시간(초). 기본값 6.0초 */
+  cycleDuration?: number;
+  /** 시작 위상 오프셋 (0 ~ 6 비율 단위, 기본값 0) */
+  phaseOffset?: number;
 }
 
 export interface FloorBlueprint {
@@ -85,6 +105,8 @@ export interface FloorBlueprint {
   damageZones?: DamageZoneSpec[];
   /** 밟으면 즉시 통상 점프의 3배 높이로 솟구치는 점프 버튼 목록 */
   jumpPads?: JumpPadSpec[];
+  /** 타일 전체가 가로 2등분되어 (초록 3 : 노랑 1 : 빨강 2) 비율로 번갈아 변화하는 시간차 데미지 장판 타일 목록 */
+  timedHazardTiles?: TimedHazardTileSpec[];
 }
 
 /**
@@ -886,6 +908,170 @@ export const TOWER_FLOORS: FloorBlueprint[] = [
       },
     ],
   },
+  {
+    floorNumber: 8,
+    title: '8층 · 시간차 시그널 타워',
+    subtitle: '진행 방향 기준 가로 2등분된 타일이 초록·노랑·빨강(3:1:2)으로 교차 변화합니다!',
+    guideHint: '초록 구역에서 대기하다가 반대편 구역이 초록으로 바뀌는 순간 건너가세요! 빨강 구역을 밟으면 데미지를 입습니다.',
+    skyTheme: 'sunset',
+    spawnPoint: [0, 0, 0],
+    keyPosition: [0, 4.8, -62.0],
+    keyCheckpointSpawn: [0, 3.8, -62.0],
+    portalPosition: [-62.4, 7.5, -62.0],
+    fallLimitY: -6,
+    staticPlatforms: [
+      {
+        id: 'f8-start',
+        position: [0, 0, 0],
+        size: [9.6, 1.4, 9.6],
+        theme: 'meadow',
+      },
+      {
+        id: 'f8-signal-1',
+        position: [0, 0.8, -12.6],
+        size: [9.8, 1.5, 10.4],
+        theme: 'stone',
+      },
+      {
+        id: 'f8-signal-2',
+        position: [0, 1.6, -25.8],
+        size: [9.8, 1.5, 10.4],
+        theme: 'stone',
+      },
+      {
+        id: 'f8-signal-3',
+        position: [0, 3.0, -49.0],
+        size: [9.8, 1.6, 10.4],
+        theme: 'stone',
+      },
+      {
+        id: 'f8-corner-key-island',
+        position: [0, 3.8, -62.0],
+        size: [10.4, 1.7, 10.4],
+        theme: 'gold',
+      },
+      {
+        id: 'f8-west-signal-4',
+        position: [-13.0, 4.5, -62.0],
+        size: [10.4, 1.6, 9.8],
+        theme: 'stone',
+      },
+      {
+        id: 'f8-west-signal-5',
+        position: [-36.2, 5.8, -62.0],
+        size: [10.6, 1.6, 9.8],
+        theme: 'stone',
+      },
+      {
+        id: 'f8-west-signal-6',
+        position: [-49.4, 6.6, -62.0],
+        size: [10.4, 1.6, 9.8],
+        theme: 'stone',
+      },
+      {
+        id: 'f8-goal-island',
+        position: [-62.4, 7.5, -62.0],
+        size: [10.4, 1.8, 10.4],
+        theme: 'royal',
+      },
+    ],
+    movingPlatforms: [
+      {
+        id: 'f8-bridge-1',
+        startPos: [0, 2.0, -34.2],
+        endPos: [0, 2.6, -40.6],
+        size: [6.8, 1.2, 6.8],
+        speed: 0.72,
+        phase: 0,
+        theme: 'emerald',
+      },
+      {
+        id: 'f8-bridge-2',
+        startPos: [-21.4, 4.9, -62.0],
+        endPos: [-27.8, 5.5, -62.0],
+        size: [6.8, 1.2, 6.8],
+        speed: 0.76,
+        phase: 1,
+        theme: 'emerald',
+      },
+    ],
+    rotatingBeams: [
+      {
+        id: 'f8-beam-1',
+        center: [0, 1.6, -25.8],
+        radius: 3.9,
+        beamHeightOffset: 0.52,
+        angularSpeed: 1.45,
+        initialAngle: 0,
+        armType: 'single',
+      },
+      {
+        id: 'f8-beam-2',
+        center: [-36.2, 5.8, -62.0],
+        radius: 3.9,
+        beamHeightOffset: 0.52,
+        angularSpeed: -1.55,
+        initialAngle: Math.PI / 2,
+        armType: 'double',
+      },
+    ],
+    timedHazardTiles: [
+      {
+        // 북쪽(-Z) 진행: 가로선(X축 평행)으로 앞/뒤 2등분
+        id: 'f8-timed-1',
+        position: [0, 0.8, -12.6],
+        size: [9.8, 10.4],
+        splitAxis: 'z',
+        cycleDuration: 6.0,
+        phaseOffset: 0,
+      },
+      {
+        // 북쪽(-Z) 진행: 가로선(X축 평행)으로 앞/뒤 2등분 (위상차 적용)
+        id: 'f8-timed-2',
+        position: [0, 1.6, -25.8],
+        size: [9.8, 10.4],
+        splitAxis: 'z',
+        cycleDuration: 6.0,
+        phaseOffset: 1.5,
+      },
+      {
+        // 북쪽(-Z) 진행: 가로선(X축 평행)으로 앞/뒤 2등분
+        id: 'f8-timed-3',
+        position: [0, 3.0, -49.0],
+        size: [9.8, 10.4],
+        splitAxis: 'z',
+        cycleDuration: 5.4,
+        phaseOffset: 3.0,
+      },
+      {
+        // 서쪽(-X) 진행: 진행 방향에서 바라봤을 때 가로선(Z축 평행)으로 앞/뒤 2등분
+        id: 'f8-timed-4',
+        position: [-13.0, 4.5, -62.0],
+        size: [10.4, 9.8],
+        splitAxis: 'x',
+        cycleDuration: 6.0,
+        phaseOffset: 0,
+      },
+      {
+        // 서쪽(-X) 진행: 진행 방향에서 바라봤을 때 가로선(Z축 평행)으로 앞/뒤 2등분
+        id: 'f8-timed-5',
+        position: [-36.2, 5.8, -62.0],
+        size: [10.6, 9.8],
+        splitAxis: 'x',
+        cycleDuration: 5.4,
+        phaseOffset: 2.0,
+      },
+      {
+        // 서쪽(-X) 진행: 골인 섬 직전 마지막 시간차 데미지 장판 타일
+        id: 'f8-timed-6',
+        position: [-49.4, 6.6, -62.0],
+        size: [10.4, 9.8],
+        splitAxis: 'x',
+        cycleDuration: 5.0,
+        phaseOffset: 4.0,
+      },
+    ],
+  },
 ];
 
 export function getFloorBlueprint(floorNumber: number): FloorBlueprint {
@@ -909,4 +1095,31 @@ export function evaluateRotatingBeamAngle(
   floorTime: number
 ): number {
   return spec.initialAngle + floorTime * spec.angularSpeed;
+}
+
+/**
+ * 시간차 데미지 장판 타일 상태 계산:
+ * - 한 구역은 초록(3) -> 노랑(1) -> 빨강(2) 비율(총 6단위)로 순환합니다.
+ * - 1구역과 2구역은 정확히 반 주기(+3단위) 위상차를 두어
+ *   (초록/노랑) -> (초록/빨강) -> (노랑/초록) -> (빨강/초록) -> (초록/노랑) 순서로 교차합니다.
+ */
+export function evaluateTimedHazardTileStates(
+  spec: TimedHazardTileSpec,
+  floorTime: number
+): { zone1: TimedZoneState; zone2: TimedZoneState } {
+  const cycle = spec.cycleDuration ?? 6.0;
+  const offset = spec.phaseOffset ?? 0;
+  const u1 = (((floorTime / cycle) * 6 + offset) % 6 + 6) % 6;
+  const u2 = (u1 + 3) % 6;
+
+  const toState = (u: number): TimedZoneState => {
+    if (u < 3) return 'green';
+    if (u < 4) return 'yellow';
+    return 'red';
+  };
+
+  return {
+    zone1: toState(u1),
+    zone2: toState(u2),
+  };
 }

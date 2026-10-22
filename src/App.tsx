@@ -700,7 +700,14 @@ export default function App() {
                       </div>
 
                       <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-300">
-                        {floor.floorNumber === 7 ? (
+                        {floor.floorNumber === 8 ? (
+                          <>
+                            <Sunset className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span className="text-emerald-200 truncate">
+                              노을 하늘 · 시간차 2등분 데미지 장판
+                            </span>
+                          </>
+                        ) : floor.floorNumber === 7 ? (
                           <>
                             <Sun className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
                             <span className="text-cyan-200 truncate">
